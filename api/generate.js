@@ -22,7 +22,10 @@ module.exports = async function handler(req, res) {
 
   // ── Dynamic max_tokens based on duration ──────────────────
   // ~10 tokens per minute of flow is a safe ceiling with buffer
-  const maxTokens = Math.min(6000, Math.max(800, dur * 40));
+  // Ladder flows are verbose (repeated pose lists every round) — need extra headroom
+  const isLadder = (req.body.prompt || '').includes('Ladder');
+  const multiplier = isLadder ? 80 : 55;
+  const maxTokens = Math.min(8000, Math.max(800, dur * multiplier));
 
   // ── Tight system prompt — every token costs money ─────────
   const system = `You are a yoga flow creator for @groundingwithshera. Output structured yoga flows a teacher can use immediately.

@@ -1,0 +1,9 @@
+{
+  "name": "sankalpa-yoga-flow-creator",
+  "version": "1.0.0",
+  "description": "Sankalpa — Yoga Flow Creator by @groundingwithshera",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  }
+}

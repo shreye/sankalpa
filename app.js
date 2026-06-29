@@ -293,175 +293,146 @@ async function callAPI(prompt) {
 
 // ── Phase colour map ──────────────────────────────────────
 const PHASE_COLORS = {
-  'CENTERING':   '#2A9D8F',
-  'PRANAYAMA':   '#7B5EA7',
-  'WARM-UP':     '#E9A84C',
-  'WARMUP':      '#E9A84C',
-  'PEAK':        '#D95F43',
-  'COOL-DOWN':   '#48A999',
-  'COOLDOWN':    '#48A999',
-  'SAVASANA':    '#5B8DB8',
-  'MEDITATION':  '#4A3780',
+  'CENTERING':  '#2A9D8F',
+  'PRANAYAMA':  '#7B5EA7',
+  'WARM':       '#E9A84C',
+  'PEAK':       '#D95F43',
+  'COOL':       '#48A999',
+  'SAVASANA':   '#5B8DB8',
+  'MEDITATION': '#4A3780',
 };
 
 function getPhaseColor(name) {
-  const key = name.toUpperCase().replace(/[^A-Z-]/g, '');
+  const up = name.toUpperCase();
   for (const [k, v] of Object.entries(PHASE_COLORS)) {
-    if (key.includes(k.replace('-',''))) return v;
+    if (up.includes(k)) return v;
   }
   return '#888780';
 }
 
-// ── Structured flow renderer ──────────────────────────────
-function renderFlow(text) {
-  const lines = text.split('\n');
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderFlow(raw) {
+  const lines = raw.split('\n');
   let html = '';
   let inPhase = false;
 
-  // Phase header pattern: CENTERING, WARM-UP, PEAK etc (all caps, optional dash/space + time)
-  const phaseRe = /^(CENTERING|PRANAYAMA|WARM[\s-]?UP|PEAK|COOL[\s-]?DOWN|SAVASANA|MEDITATION)\b(.*)$/i;
-  // Round header: Round 1, Round 2 etc
-  const roundRe = /^(Round\s+\d+)\s*[:\-–]?\s*(.*)$/i;
-  // Pose line: starts with number. **Name** or number. Name
-  const poseRe = /^(\d+|[★\*])\.\s+\*{0,2}([^\*—–\-]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–\-]+?\s*(.+)$/;
-  // Repeated pose (ladder): just "A. Warrior 1 — as before" or greyed
-  const repeatRe = /^[A-Z]\.\s+(.+?)\s*[—–]\s*(as before|repeat.*)$/i;
-  // Intention/blockquote
-  const intentRe = /^["""](.+)["""]\s*$/;
-  // Hold time at end of cue: (5 breaths) or (2 min) or (30 sec)
-  const holdRe = /\((\d+[\d.]*\s*(?:breaths?|min|sec|seconds?)(?:\s+(?:each\s+side|per\s+side|rounds?.*)?)?)\)$/i;
+  const rTitle   = /^#\s+(.+)$/;
+  const rPhase   = /^#{1,3}\s*(CENTERING|PRANAYAMA|WARM[\s\-]?UP|PEAK|COOL[\s\-]?DOWN|SAVASANA|MEDITATION)(.*)$/i;
+  const rRound   = /^(Round\s+\d+)\s*[:\-–]?\s*(.*)$/i;
+  const rRepeat  = /^-\s+(.+?)\s*[—–]\s*as before/i;
+  const rNewPose = /^[★\*]\s+\*{0,2}([^*—–]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
+  const rPose    = /^(\d+)\.\s+\*{0,2}([^*—–]+?)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
+  const rHold    = /\((\d[\d.]*\s*(?:breaths?|min|sec|seconds?)(?:[^)]*)?)\)\s*$/i;
+  const rIntent  = /^\*(.+)\*$|^["""](.+)["""]\s*$/;
+  const rVinyasa = /^(\d+)\.\s+\*{0,2}(Vinyasa)\*{0,2}\s*[—–]\s*(.+)$/i;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line === '---') continue;
+  function closePhase() { if (inPhase) { html += '</div>'; inPhase = false; } }
 
-    // Flow title (first # heading or first bold line)
-    if (line.startsWith('# ')) {
-      html += `<h1 style="font-size:18px;font-weight:600;margin-bottom:4px">${line.slice(2)}</h1>`;
-      continue;
-    }
+  function openPhase(name, extra) {
+    closePhase();
+    const color = getPhaseColor(name);
+    html += `<div style="margin-bottom:20px">`;
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)">`;
+    html += `<div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>`;
+    html += `<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-secondary)">${escHtml(name.toUpperCase())}</span>`;
+    if (extra && extra.trim()) html += `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${escHtml(extra.trim())}</span>`;
+    html += `</div>`;
+    inPhase = true;
+  }
 
-    // Subtitle / style summary
-    if (line.startsWith('## ')) {
-      const txt = line.slice(3);
-      if (phaseRe.test(txt)) {
-        // fall through to phase handler
-      } else {
-        html += `<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${txt}</p>`;
-        continue;
-      }
-    }
+  function poseRow(num, name, counter, cue, isNew) {
+    const holdMatch = cue.match(rHold);
+    const hold = holdMatch ? holdMatch[1] : '';
+    if (hold) cue = cue.replace(holdMatch[0], '').trim();
+    cue = cue.replace(/\.$/, '').trim();
+    const bg = isNew
+      ? 'background:#f0fdf4;border-left:2px solid #bbf7d0;padding:8px 10px;border-radius:6px;margin:2px 0'
+      : 'padding:8px 0;border-bottom:1px solid var(--border)';
+    html += `<div style="display:flex;align-items:flex-start;gap:10px;${bg}">`;
+    html += `<span style="font-size:11px;color:var(--text-muted);min-width:20px;padding-top:2px;flex-shrink:0">${escHtml(String(num))}</span>`;
+    html += `<div style="flex:1">`;
+    html += `<div style="font-size:13px;font-weight:500;color:var(--text)">${escHtml(name.trim())}`;
+    if (isNew) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#16a34a;color:#fff;vertical-align:middle">★ new</span>`;
+    if (counter) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;vertical-align:middle">${escHtml(counter)}</span>`;
+    html += `</div>`;
+    if (cue) html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.6">${escHtml(cue)}</div>`;
+    html += `</div>`;
+    if (hold) html += `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;padding-top:2px;font-style:italic;flex-shrink:0">${escHtml(hold)}</span>`;
+    html += `</div>`;
+  }
 
-    // Opening intention
-    const intentMatch = line.match(intentRe);
-    if (intentMatch) {
-      html += `<blockquote style="border-left:2px solid var(--accent-border);padding:.6rem 1rem;background:var(--accent-bg);border-radius:0 8px 8px 0;color:var(--text-secondary);font-style:italic;margin:12px 0;font-size:13px">${intentMatch[1]}</blockquote>`;
-      continue;
-    }
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line === '---' || line === '—') continue;
+
+    // Title
+    const mTitle = line.match(rTitle);
+    if (mTitle) { closePhase(); html += `<h1 style="font-size:19px;font-weight:600;margin-bottom:4px;color:var(--text)">${escHtml(mTitle[1])}</h1>`; continue; }
 
     // Phase header
-    const phaseMatch = line.match(phaseRe) || line.replace(/^##\s*/,'').match(phaseRe);
-    if (phaseMatch) {
-      const phaseName = phaseMatch[1].toUpperCase();
-      const phaseExtra = (phaseMatch[2] || '').replace(/[—–\-:]/,'').trim();
-      const color = getPhaseColor(phaseName);
-      if (inPhase) html += '</div>';
-      html += `<div style="margin-bottom:16px">`;
-      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">`;
-      html += `<div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>`;
-      html += `<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">${phaseName}</span>`;
-      if (phaseExtra) html += `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${phaseExtra}</span>`;
-      html += `</div>`;
-      inPhase = true;
-      continue;
+    const mPhase = line.match(rPhase);
+    if (mPhase) { openPhase(mPhase[1], mPhase[2].replace(/[()]/g,'').trim()); continue; }
+
+    // Subtitle (plain text before first phase)
+    if (!inPhase && !line.startsWith('#') && !line.match(rIntent)) {
+      html += `<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${escHtml(line)}</p>`; continue;
     }
 
-    // Round header (Ladder flows)
-    const roundMatch = line.match(roundRe);
-    if (roundMatch) {
-      html += `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">`;
-      html += `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--accent-bg);color:var(--accent-text);border:1px solid var(--accent-border)">${roundMatch[1]}</span>`;
-      if (roundMatch[2]) html += `<span style="font-size:11px;color:var(--text-muted);font-style:italic">${roundMatch[2]}</span>`;
-      html += `</div>`;
-      continue;
+    // Intention / italic
+    const mIntent = line.match(rIntent);
+    if (mIntent) {
+      const txt = escHtml(mIntent[1] || mIntent[2] || '');
+      html += `<blockquote style="border-left:2px solid #bfdbfe;padding:.65rem 1rem;background:#eff6ff;border-radius:0 8px 8px 0;color:#374151;font-style:italic;margin:10px 0 14px;font-size:13px;line-height:1.6">${txt}</blockquote>`; continue;
     }
 
-    // Repeated pose (greyed, ladder)
-    const repeatMatch = line.match(repeatRe);
-    if (repeatMatch) {
-      html += `<div style="display:flex;gap:10px;padding:5px 10px;opacity:.5;font-size:12px;color:var(--text-secondary)">`;
-      html += `<span style="flex:1;font-style:italic">${repeatMatch[1]} — as before</span>`;
-      html += `</div>`;
-      continue;
+    // Round header
+    const mRound = line.match(rRound);
+    if (mRound) {
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 6px">`;
+      html += `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">${escHtml(mRound[1])}</span>`;
+      if (mRound[2]) html += `<span style="font-size:11px;color:var(--text-muted);font-style:italic">${escHtml(mRound[2])}</span>`;
+      html += `</div>`; continue;
     }
 
-    // New pose in ladder (★ or letter prefix)
-    const newPoseRe = /^[★\*]\s+\*{0,2}([^\*—–]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
-    const newPoseMatch = line.match(newPoseRe);
-    if (newPoseMatch) {
-      const poseName = newPoseMatch[1].trim();
-      const counterTag = newPoseMatch[2];
-      let cue = newPoseMatch[3].trim();
-      const holdMatch = cue.match(holdRe);
-      const holdStr = holdMatch ? holdMatch[0] : '';
-      if (holdStr) cue = cue.replace(holdStr, '').trim();
-      html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;margin:2px 0;border-left:2px solid #bbf7d0">`;
-      html += `<div style="flex:1">`;
-      html += `<div style="font-size:13px;font-weight:500;color:var(--text)">`;
-      html += `${poseName} <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#16a34a;color:#fff;vertical-align:middle">new ★</span>`;
-      if (counterTag) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border)">${counterTag}</span>`;
-      html += `</div>`;
-      html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.55">${cue}</div>`;
-      html += `</div>`;
-      if (holdStr) html += `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;padding-top:2px;font-style:italic">${holdStr.replace(/[()]/g,'')}</span>`;
-      html += `</div>`;
-      continue;
+    // Repeated pose
+    const mRepeat = line.match(rRepeat);
+    if (mRepeat) { html += `<div style="padding:5px 10px;opacity:.5;font-size:12px;font-style:italic;color:var(--text-secondary)">${escHtml(mRepeat[1])} — as before</div>`; continue; }
+
+    // Vinyasa (subtle)
+    const mVinyasa = line.match(rVinyasa);
+    if (mVinyasa) {
+      html += `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">`;
+      html += `<span style="font-size:11px;color:var(--text-muted);min-width:20px">${mVinyasa[1]}</span>`;
+      html += `<span style="font-size:12px;color:var(--text-muted);font-style:italic">${escHtml(mVinyasa[2])} — ${escHtml(mVinyasa[3])}</span></div>`; continue;
     }
+
+    // New pose ★
+    const mNew = line.match(rNewPose);
+    if (mNew) { poseRow('★', mNew[1], mNew[2], mNew[3], true); continue; }
 
     // Standard numbered pose
-    const poseMatch = line.match(poseRe);
-    if (poseMatch) {
-      const num = poseMatch[1];
-      const poseName = poseMatch[2].trim();
-      const counterTag = poseMatch[3];
-      let cue = poseMatch[4].trim();
-      const holdMatch = cue.match(holdRe);
-      const holdStr = holdMatch ? holdMatch[0] : '';
-      if (holdStr) cue = cue.replace(holdStr, '').trim();
-      html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">`;
-      html += `<span style="font-size:11px;color:var(--text-muted);min-width:18px;padding-top:2px;flex-shrink:0">${num}</span>`;
-      html += `<div style="flex:1">`;
-      html += `<div style="font-size:13px;font-weight:500;color:var(--text)">${poseName}`;
-      if (counterTag) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border);vertical-align:middle">${counterTag}</span>`;
-      html += `</div>`;
-      html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.55">${cue}</div>`;
-      html += `</div>`;
-      if (holdStr) html += `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;padding-top:2px;font-style:italic">${holdStr.replace(/[()]/g,'')}</span>`;
-      html += `</div>`;
-      continue;
-    }
-
-    // Vinyasa / transition line
-    if (/^→|^vinyasa/i.test(line)) {
-      html += `<div style="font-size:11px;color:var(--text-muted);padding:3px 10px;font-style:italic">${line}</div>`;
-      continue;
-    }
+    const mPose = line.match(rPose);
+    if (mPose) { poseRow(mPose[1], mPose[2], mPose[3], mPose[4], false); continue; }
 
     // Branding footer
     if (/created by/i.test(line)) {
-      html += `<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">${line}</div>`;
-      continue;
+      closePhase();
+      html += `<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border)">${escHtml(line)}</div>`; continue;
     }
 
-    // Generic line — render as small note
-    if (line.length > 2) {
-      html += `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;font-style:italic">${line}</p>`;
+    // Anything else in a phase
+    if (inPhase && line.length > 2) {
+      html += `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;font-style:italic">${escHtml(line)}</p>`;
     }
   }
 
-  if (inPhase) html += '</div>';
+  closePhase();
   return html;
 }
+
 
 // ── Generate flow ─────────────────────────────────────────
 async function generate() {

@@ -292,6 +292,14 @@
       .g4 { grid-template-columns: 1fr 1fr; }
       .btn-row { grid-template-columns: 1fr; }
     }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .header, .sec, hr, .btn-row, .footer, .output-actions, .loading { display: none !important; }
+      .output-wrap { display: block !important; margin: 0; }
+      .output-card { border: none; padding: 0; }
+      .container { max-width: 100%; padding: 1cm; }
+      .output-content { font-size: 12px; }
+    }
   </style>
 </head>
 <body>

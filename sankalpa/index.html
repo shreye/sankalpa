@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sankalpa — Yoga Flow Creator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f8f5;
+      --surface: #ffffff;
+      --surface-2: #f2f0eb;
+      --border: #e4e1d8;
+      --border-strong: #c8c4b8;
+      --text: #1a1a18;
+      --text-secondary: #5a5a54;
+      --text-muted: #8a8a82;
+      --accent: #2563eb;
+      --accent-bg: #eff6ff;
+      --accent-border: #bfdbfe;
+      --accent-text: #1d4ed8;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --success-text: #15803d;
+      --warning-bg: #fffbeb;
+      --warning-border: #fcd34d;
+      --warning-text: #92400e;
+      --danger-bg: #fef2f2;
+      --danger-text: #dc2626;
+      --radius: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 3rem;
+    }
+
+    .container { max-width: 680px; margin: 0 auto; padding: 0 1.25rem; }
+
+    /* Header */
+    .header {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 2rem 0 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .header svg { width: 56px; height: 56px; margin-bottom: .75rem; }
+    .app-name { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+    .app-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; letter-spacing: .06em; text-transform: uppercase; }
+
+    /* Sections */
+    .sec { margin-bottom: 1.25rem; }
+    .lbl { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+    .lbl-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+    .hint { font-size: 10px; font-weight: 400; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+
+    /* Grids */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+    .g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; }
+
+    /* Chips */
+    .chip {
+      display: flex; align-items: flex-start; gap: 7px;
+      padding: 9px 11px; border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: pointer;
+      background: var(--surface); transition: border-color .13s, background .13s;
+      user-select: none; min-width: 0;
+    }
+    .chip:hover:not(.off) { border-color: var(--border-strong); background: var(--surface-2); }
+    .chip.on { border-color: var(--accent-border); background: var(--accent-bg); }
+    .chip.on .cl { color: var(--accent-text); }
+    .chip.on i { color: var(--accent-text); }
+    .chip.on .cs { color: var(--accent-text); opacity: .72; }
+    .chip.off { opacity: .32; pointer-events: none; }
+    .chip.suggest { border-color: var(--success-border); background: var(--success-bg); }
+    .chip.suggest .cl { color: var(--success-text); }
+    .chip.suggest i { color: var(--success-text); }
+    .chip i { font-size: 15px; color: var(--text-muted); margin-top: 1px; flex-shrink: 0; }
+    .chip.on i { color: var(--accent-text); }
+    .cl { font-size: 13px; font-weight: 500; color: var(--text); display: block; }
+    .cs { font-size: 11px; color: var(--text-muted); display: block; margin-top: 1px; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 1.1rem 0; }
+
+    /* Toggle row */
+    .trow {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 13px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--surface);
+    }
+    .tl { font-size: 13px; font-weight: 500; }
+    .ts { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .pill {
+      position: relative; width: 36px; height: 20px;
+      background: var(--border-strong); border-radius: 10px;
+      cursor: pointer; transition: background .2s; flex-shrink: 0;
+    }
+    .pill.on { background: var(--accent); }
+    .pill::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; transition: transform .2s;
+    }
+    .pill.on::after { transform: translateX(16px); }
+
+    /* Badges */
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: var(--radius); font-weight: 500; }
+    .ba { color: var(--accent-text); background: var(--accent-bg); border: 1px solid var(--accent-border); }
+    .bw { color: var(--warning-text); background: var(--warning-bg); border: 1px solid var(--warning-border); }
+    .bd { color: var(--danger-text); background: var(--danger-bg); }
+
+    /* Warn strip */
+    .warn-strip {
+      font-size: 11px; color: var(--warning-text); background: var(--warning-bg);
+      border: 1px solid var(--warning-border); border-radius: var(--radius);
+      padding: 6px 10px; margin-bottom: .6rem; display: none;
+    }
+
+    /* Multi-select */
+    .ms-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--surface);
+      cursor: pointer; min-height: 40px; user-select: none;
+    }
+    .ms-trigger:hover { border-color: var(--border-strong); }
+    .ms-trigger.open { border-color: var(--accent); }
+    .ms-tags { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+    .ms-placeholder { color: var(--text-muted); font-size: 13px; }
+    .ms-tag {
+      font-size: 11px; padding: 2px 7px; border-radius: var(--radius);
+      background: var(--accent-bg); color: var(--accent-text);
+      border: 1px solid var(--accent-border);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .ms-tag span { cursor: pointer; font-size: 14px; line-height: 1; opacity: .7; }
+    .ms-tag span:hover { opacity: 1; }
+    .ms-dropdown {
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      background: var(--surface); margin-top: 4px; display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    }
+    .ms-dropdown.open { display: block; }
+    .ms-opt {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      font-size: 13px; cursor: pointer; color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+    .ms-opt:last-child { border-bottom: none; }
+    .ms-opt:hover { background: var(--surface-2); }
+    .ms-opt.sel { background: var(--accent-bg); color: var(--accent-text); }
+    .ms-opt.sel .ms-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .ms-check {
+      width: 16px; height: 16px; border: 1px solid var(--border-strong);
+      border-radius: 4px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: transparent;
+    }
+    .ms-group {
+      padding: 5px 12px 3px; font-size: 10px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+      background: var(--surface-2); border-bottom: 1px solid var(--border);
+    }
+
+    /* Form elements */
+    input[type=text], select, textarea {
+      width: 100%; font-family: var(--font); font-size: 13px;
+      color: var(--text); background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 9px 12px; outline: none;
+      transition: border-color .15s;
+    }
+    input[type=text]:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select { cursor: pointer; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    input[type=range] { flex: 1; accent-color: var(--accent); }
+
+    /* Arc bar */
+    .arc-bar { display: flex; width: 100%; height: 32px; gap: 2px; margin-bottom: .75rem; }
+    .seg {
+      position: relative; height: 32px; border-radius: 6px;
+      cursor: default; transition: width .35s ease, filter .15s;
+      min-width: 4px; flex-shrink: 0;
+    }
+    .seg:hover { filter: brightness(1.1); }
+    .seg-tip {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      background: var(--surface); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); padding: 5px 10px;
+      font-size: 12px; font-weight: 500; color: var(--text);
+      white-space: nowrap; pointer-events: none; opacity: 0;
+      transition: opacity .15s; z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    .seg-tip::after {
+      content: ''; position: absolute; top: 100%; left: 50%;
+      transform: translateX(-50%); border: 5px solid transparent;
+      border-top-color: var(--border-strong);
+    }
+    .seg:hover .seg-tip { opacity: 1; }
+    .arc-legend { display: flex; flex-wrap: wrap; gap: 9px; }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+    .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Buttons */
+    .btn-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: .6rem; }
+    .gbtn {
+      padding: 12px; border-radius: var(--radius); border: none;
+      background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: opacity .15s; font-family: var(--font);
+    }
+    .gbtn:hover { opacity: .88; }
+    .gbtn:disabled { opacity: .5; cursor: not-allowed; }
+    .pbtn {
+      padding: 12px 14px; border-radius: var(--radius);
+      border: 1px solid var(--border-strong); background: var(--surface);
+      color: var(--text-secondary); font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; transition: background .15s; font-family: var(--font);
+    }
+    .pbtn:hover { background: var(--surface-2); }
+    .pbtn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Output area */
+    .output-wrap { margin-top: 2rem; }
+    .output-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .loading {
+      display: flex; align-items: center; gap: 10px;
+      padding: 2rem; justify-content: center;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .output-content { font-size: 14px; line-height: 1.7; color: var(--text); }
+    .output-content h1 { font-size: 20px; font-weight: 600; margin-bottom: .25rem; }
+    .output-content h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 1.25rem 0 .5rem; padding-bottom: .4rem; border-bottom: 1px solid var(--border); }
+    .output-content h3 { font-size: 13px; font-weight: 600; color: var(--text); margin: .75rem 0 .25rem; }
+    .output-content p { margin-bottom: .6rem; }
+    .output-content ul, .output-content ol { padding-left: 1.25rem; margin-bottom: .6rem; }
+    .output-content li { margin-bottom: .3rem; }
+    .output-content strong { font-weight: 600; }
+    .output-content em { font-style: italic; color: var(--text-secondary); }
+    .output-content blockquote {
+      border-left: 2px solid var(--accent-border); padding: .6rem 1rem;
+      background: var(--accent-bg); border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--text-secondary); font-style: italic; margin: .75rem 0;
+    }
+    .output-actions { display: flex; gap: 8px; margin-top: 1rem; }
+    .output-btn {
+      padding: 8px 14px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      color: var(--text-secondary); font-family: var(--font); transition: background .15s;
+    }
+    .output-btn:hover { background: var(--surface-2); }
+
+    /* Footer */
+    .footer {
+      margin-top: 2rem; padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .footer-txt { font-size: 11px; color: var(--text-muted); }
+    .footer-handle {
+      font-size: 12px; font-weight: 500; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 4px; text-decoration: none;
+    }
+    .footer-handle:hover { color: var(--text); }
+
+    @media (max-width: 480px) {
+      .g3 { grid-template-columns: 1fr 1fr; }
+      .g4 { grid-template-columns: 1fr 1fr; }
+      .btn-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="26" cy="10" rx="4.5" ry="8.5" fill="#2563eb" opacity="0.45"/>
+      <ellipse cx="26" cy="42" rx="4.5" ry="8.5" fill="#2563eb" opacity="0.45"/>
+      <ellipse cx="10" cy="26" rx="8.5" ry="4.5" fill="#2563eb" opacity="0.45"/>
+      <ellipse cx="42" cy="26" rx="8.5" ry="4.5" fill="#2563eb" opacity="0.45"/>
+      <ellipse cx="26" cy="10" rx="4.5" ry="8.5" transform="rotate(45 26 26)" fill="#2563eb" opacity="0.35"/>
+      <ellipse cx="26" cy="42" rx="4.5" ry="8.5" transform="rotate(45 26 26)" fill="#2563eb" opacity="0.35"/>
+      <ellipse cx="10" cy="26" rx="8.5" ry="4.5" transform="rotate(45 26 26)" fill="#2563eb" opacity="0.35"/>
+      <ellipse cx="42" cy="26" rx="8.5" ry="4.5" transform="rotate(45 26 26)" fill="#2563eb" opacity="0.35"/>
+      <circle cx="26" cy="26" r="5.5" fill="#2563eb" opacity="0.9"/>
+      <circle cx="26" cy="26" r="3" fill="white"/>
+    </svg>
+    <div class="app-name">Sankalpa</div>
+    <div class="app-sub">Yoga flow creator</div>
+  </div>
+
+  <!-- Duration -->
+  <div class="sec">
+    <div class="lbl">Session duration</div>
+    <div class="g3">
+      <div class="chip on" data-g="dur" data-v="15" onclick="sel(this)"><div><span class="cl">15 min</span><span class="cs">Quick flow</span></div></div>
+      <div class="chip" data-g="dur" data-v="30" onclick="sel(this)"><div><span class="cl">30 min</span><span class="cs">Standard</span></div></div>
+      <div class="chip" data-g="dur" data-v="45" onclick="sel(this)"><div><span class="cl">45 min</span><span class="cs">Extended</span></div></div>
+      <div class="chip" data-g="dur" data-v="60" onclick="sel(this)"><div><span class="cl">60 min</span><span class="cs">Full session</span></div></div>
+      <div class="chip" data-g="dur" data-v="75" onclick="sel(this)"><div><span class="cl">75 min</span><span class="cs">1 hr 15 min</span></div></div>
+      <div class="chip" data-g="dur" data-v="90" onclick="sel(this)"><div><span class="cl">90 min</span><span class="cs">1 hr 30 min</span></div></div>
+    </div>
+  </div>
+
+  <!-- Breathwork -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Breathwork and meditation</span><span class="badge ba" id="bw-badge" style="display:none">—</span></div>
+    <div id="bw-warn" class="warn-strip"></div>
+    <div class="trow">
+      <div><div class="tl">Include breathwork and meditation</div><div class="ts">Pranayama after centering · meditation after Savasana</div></div>
+      <div class="pill" id="bw-pill" onclick="toggleBW()"></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Style -->
+  <div class="sec">
+    <div class="lbl">Yoga style</div>
+    <div class="g2">
+      <div class="chip on" data-g="style" data-v="Vinyasa" onclick="sel(this);applyRules()"><i class="ti ti-flame"></i><div><span class="cl">Vinyasa flow</span><span class="cs">Dynamic, breath-linked</span></div></div>
+      <div class="chip" data-g="style" data-v="Restorative" onclick="sel(this);applyRules()"><i class="ti ti-moon"></i><div><span class="cl">Restorative yoga</span><span class="cs">Slow, passive holds</span></div></div>
+    </div>
+  </div>
+
+  <!-- Flow structure -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Flow structure</span><span id="flow-warn" class="badge bd" style="display:none">some options unavailable</span></div>
+    <div class="g3">
+      <div class="chip on" data-g="flow" data-v="Ladder" onclick="sel(this);applyRules()"><i class="ti ti-stairs-up"></i><div><span class="cl">Ladder</span><span class="cs">Progressive build</span></div></div>
+      <div class="chip" data-g="flow" data-v="Repeating" onclick="sel(this);applyRules()"><i class="ti ti-repeat"></i><div><span class="cl">Repeating / looping</span><span class="cs">Same sequence both sides</span></div></div>
+      <div class="chip" data-g="flow" data-v="PeakPose" data-adv onclick="sel(this);applyRules()"><i class="ti ti-mountain"></i><div><span class="cl">Peak pose</span><span class="cs">Build to apex pose</span></div></div>
+      <div class="chip" data-g="flow" data-v="Mandala" data-adv onclick="sel(this);applyRules()"><i class="ti ti-circle-dotted"></i><div><span class="cl">Mandala</span><span class="cs">360° mat rotation</span></div></div>
+      <div class="chip" data-g="flow" data-v="Slow" onclick="sel(this);applyRules()"><i class="ti ti-wind"></i><div><span class="cl">Slow</span><span class="cs">Long holds, mindful pace</span></div></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Focus -->
+  <div class="sec">
+    <div class="lbl">Focus area <span class="hint">(select one or more)</span></div>
+    <div class="g3">
+      <div class="chip" data-g="focus" onclick="multi(this)"><i class="ti ti-run"></i><div><span class="cl">Legs</span><span class="cs">Hamstrings, quads</span></div></div>
+      <div class="chip" data-g="focus" onclick="multi(this)"><i class="ti ti-arrows-down"></i><div><span class="cl">Lower body</span><span class="cs">Hips, glutes</span></div></div>
+      <div class="chip" data-g="focus" data-strength onclick="multi(this)"><i class="ti ti-arm"></i><div><span class="cl">Upper body</span><span class="cs">Shoulders, arms</span></div></div>
+      <div class="chip" data-g="focus" data-strength onclick="multi(this)"><i class="ti ti-circle-dot"></i><div><span class="cl">Core</span><span class="cs">Abs, obliques</span></div></div>
+      <div class="chip" data-g="focus" onclick="multi(this)"><i class="ti ti-yoga"></i><div><span class="cl">Stability</span><span class="cs">Balance, proprioception</span></div></div>
+      <div class="chip" data-g="focus" onclick="multi(this)"><i class="ti ti-arrows-maximize"></i><div><span class="cl">Full body</span><span class="cs">All areas</span></div></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Level -->
+  <div class="sec">
+    <div class="lbl">Level</div>
+    <div class="g2">
+      <div class="chip on" data-g="level" data-v="Beginner" onclick="sel(this)"><i class="ti ti-seedling"></i><div><span class="cl">Beginner</span><span class="cs">Accessible poses, longer holds</span></div></div>
+      <div class="chip" data-g="level" data-v="Intermediate" onclick="sel(this)"><i class="ti ti-trending-up"></i><div><span class="cl">Intermediate</span><span class="cs">More challenging variations</span></div></div>
+    </div>
+  </div>
+
+  <!-- Intensity -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Intensity</span><span id="int-warn" class="badge bw" style="display:none">auto-adjusted</span></div>
+    <div class="g3">
+      <div class="chip" data-g="int" data-v="Low" onclick="sel(this)"><i class="ti ti-leaf"></i><div><span class="cl">Low</span><span class="cs">Gentle, relaxed pace</span></div></div>
+      <div class="chip on" data-g="int" data-v="Medium" onclick="sel(this)"><i class="ti ti-activity"></i><div><span class="cl">Medium</span><span class="cs">Moderate effort</span></div></div>
+      <div class="chip" data-g="int" data-v="High" onclick="sel(this)"><i class="ti ti-bolt"></i><div><span class="cl">High</span><span class="cs">Strong, energising</span></div></div>
+    </div>
+  </div>
+
+  <!-- Class energy -->
+  <div class="sec">
+    <div class="lbl">Class energy</div>
+    <div class="g4">
+      <div class="chip" data-g="energy" data-v="Grounding" onclick="sel(this);applyRules()"><i class="ti ti-plant-2"></i><div><span class="cl">Grounding</span><span class="cs">Earthy, floor-based</span></div></div>
+      <div class="chip on" data-g="energy" data-v="Flowing" onclick="sel(this);applyRules()"><i class="ti ti-wave-sine"></i><div><span class="cl">Flowing</span><span class="cs">Smooth, breath-led</span></div></div>
+      <div class="chip" data-g="energy" data-v="Dynamic" data-adv-energy onclick="sel(this);applyRules()"><i class="ti ti-bolt"></i><div><span class="cl">Dynamic</span><span class="cs">Athletic, heat-building</span></div></div>
+      <div class="chip" data-g="energy" data-v="Meditative" onclick="sel(this);applyRules()"><i class="ti ti-brain"></i><div><span class="cl">Meditative</span><span class="cs">Still, inner focus</span></div></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Practice considerations -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Practice considerations <span class="hint">(optional)</span></span><span class="badge ba" id="pc-count" style="display:none">0 selected</span></div>
+    <div>
+      <div class="ms-trigger" id="ms-trigger" onclick="toggleDD()">
+        <div class="ms-tags" id="ms-tags"><span class="ms-placeholder">Select any adaptations needed…</span></div>
+        <i class="ti ti-chevron-down" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i>
+      </div>
+      <div class="ms-dropdown" id="ms-dd">
+        <div class="ms-group">Joint and structural</div>
+        <div class="ms-opt" data-val="Knee sensitivity" onclick="togglePC(this)"><div class="ms-check"></div>Knee sensitivity</div>
+        <div class="ms-opt" data-val="Lower back pain" onclick="togglePC(this)"><div class="ms-check"></div>Lower back pain</div>
+        <div class="ms-opt" data-val="Hip replacement" onclick="togglePC(this)"><div class="ms-check"></div>Hip replacement</div>
+        <div class="ms-opt" data-val="Shoulder injury" onclick="togglePC(this)"><div class="ms-check"></div>Shoulder injury</div>
+        <div class="ms-opt" data-val="Wrist sensitivity" onclick="togglePC(this)"><div class="ms-check"></div>Wrist sensitivity</div>
+        <div class="ms-opt" data-val="Neck issues" onclick="togglePC(this)"><div class="ms-check"></div>Neck issues</div>
+        <div class="ms-opt" data-val="Ankle instability" onclick="togglePC(this)"><div class="ms-check"></div>Ankle instability</div>
+        <div class="ms-group">Movement restrictions</div>
+        <div class="ms-opt" data-val="Avoid inversions" onclick="togglePC(this)"><div class="ms-check"></div>Avoid inversions</div>
+        <div class="ms-opt" data-val="Avoid deep twists" onclick="togglePC(this)"><div class="ms-check"></div>Avoid deep twists</div>
+        <div class="ms-opt" data-val="Avoid deep backbends" onclick="togglePC(this)"><div class="ms-check"></div>Avoid deep backbends</div>
+        <div class="ms-opt" data-val="Avoid prone poses" onclick="togglePC(this)"><div class="ms-check"></div>Avoid prone poses</div>
+        <div class="ms-opt" data-val="Avoid supine poses" onclick="togglePC(this)"><div class="ms-check"></div>Avoid supine poses</div>
+        <div class="ms-group">Special conditions</div>
+        <div class="ms-opt" data-val="Pregnancy — first trimester" data-preg onclick="togglePC(this)"><div class="ms-check"></div>Pregnancy — first trimester</div>
+        <div class="ms-opt" data-val="Pregnancy — second or third trimester" data-preg onclick="togglePC(this)"><div class="ms-check"></div>Pregnancy — second or third trimester</div>
+        <div class="ms-opt" data-val="High blood pressure" onclick="togglePC(this)"><div class="ms-check"></div>High blood pressure</div>
+        <div class="ms-opt" data-val="Osteoporosis" onclick="togglePC(this)"><div class="ms-check"></div>Osteoporosis</div>
+        <div class="ms-opt" data-val="Recent surgery" onclick="togglePC(this)"><div class="ms-check"></div>Recent surgery</div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Theme -->
+  <div class="sec">
+    <div class="lbl">Class theme <span class="hint">(optional)</span></div>
+    <select id="theme">
+      <option value="">No theme selected</option>
+      <option value="Strength and power">Strength and power — warriors, arm balances, chair holds</option>
+      <option value="Flexibility and opening">Flexibility and opening — hip openers, heart openers, long stretches</option>
+      <option value="Stress relief and calm">Stress relief and calm — forward folds, gentle twists, breathwork emphasis</option>
+      <option value="Gratitude and heart opening">Gratitude and heart opening — backbends, Camel, Bridge, Wheel</option>
+      <option value="Grounding and stability">Grounding and stability — standing poses, Tree, Mountain, earth-connected</option>
+      <option value="Energy and awakening">Energy and awakening — Sun Salutations, inversions, dynamic transitions</option>
+      <option value="Detox and digestion">Detox and digestion — twists, Boat, seated compressions</option>
+      <option value="Surrender and letting go">Surrender and letting go — Yin holds, Pigeon, extended Savasana</option>
+      <option value="Back care">Back care — Cat-Cow, Child's pose, gentle spinal work</option>
+      <option value="Hip liberation">Hip liberation — Pigeon, Lizard, Butterfly, Figure-4</option>
+    </select>
+  </div>
+
+  <!-- Savasana -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Savasana duration</span><span class="badge ba" id="sav-val">2 min</span></div>
+    <div class="slider-row">
+      <span style="font-size:12px;color:var(--text-muted)">2 min</span>
+      <input type="range" id="sav" min="2" max="5" step="1" value="2" oninput="document.getElementById('sav-val').textContent=this.value+' min';renderArc()">
+      <span style="font-size:12px;color:var(--text-muted)">5 min</span>
+    </div>
+  </div>
+
+  <!-- Props -->
+  <div class="sec">
+    <div class="lbl">Props available <span class="hint">(select all that apply)</span></div>
+    <div class="g3">
+      <div class="chip" data-g="props" onclick="multiProps(this)"><i class="ti ti-square"></i><div><span class="cl">Yoga blocks</span><span class="cs">Support and alignment</span></div></div>
+      <div class="chip" data-g="props" data-bolster onclick="multiProps(this)"><i class="ti ti-bed"></i><div><span class="cl">Pillows / bolster</span><span class="cs">Comfort and passive holds</span></div></div>
+      <div class="chip" data-g="props" data-noprops onclick="multiProps(this)"><i class="ti ti-ban"></i><div><span class="cl">No props</span><span class="cs">Mat only</span></div></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Arc -->
+  <div class="sec">
+    <div class="lbl-row"><span class="lbl" style="margin-bottom:0">Session arc</span><span style="font-size:11px;color:var(--text-muted)">hover to explore</span></div>
+    <div class="arc-bar" id="arc-bar"></div>
+    <div class="arc-legend" id="arc-legend"></div>
+  </div>
+
+  <hr>
+
+  <!-- Name -->
+  <div class="sec">
+    <div class="lbl">Name your flow</div>
+    <input type="text" id="fname" placeholder="Morning power flow, Tuesday restore…">
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="gbtn" id="gen-btn" onclick="generate()"><i class="ti ti-sparkles"></i> Generate my flow</button>
+    <button class="pbtn" id="pdf-btn" onclick="generatePDF()"><i class="ti ti-file-type-pdf"></i> Download PDF</button>
+  </div>
+
+  <!-- Output -->
+  <div class="output-wrap" id="output-wrap" style="display:none">
+    <div class="output-card">
+      <div class="loading" id="loading"><div class="spinner"></div> Building your flow…</div>
+      <div class="output-content" id="output-content"></div>
+      <div class="output-actions" id="output-actions" style="display:none">
+        <button class="output-btn" onclick="copyFlow()"><i class="ti ti-copy"></i> Copy</button>
+        <button class="output-btn" onclick="printFlow()"><i class="ti ti-printer"></i> Print</button>
+        <button class="output-btn" onclick="resetOutput()"><i class="ti ti-refresh"></i> New flow</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="footer-txt">Created by</span>
+    <a class="footer-handle" href="https://www.instagram.com/groundingwithshera" target="_blank"><i class="ti ti-brand-instagram"></i> @groundingwithshera</a>
+    <a class="footer-handle" href="https://www.tiktok.com/@groundingwithshera" target="_blank"><i class="ti ti-brand-tiktok"></i> @groundingwithshera</a>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

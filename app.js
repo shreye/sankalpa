@@ -291,34 +291,194 @@ async function callAPI(prompt) {
   return data.content;
 }
 
-// ── Markdown → HTML (minimal) ─────────────────────────────
-function mdToHtml(text) {
-  return text
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hbupl])(.+)$/gm, '<p>$1</p>')
-    .replace(/<p><\/p>/g, '');
+// ── Phase colour map ──────────────────────────────────────
+const PHASE_COLORS = {
+  'CENTERING':   '#2A9D8F',
+  'PRANAYAMA':   '#7B5EA7',
+  'WARM-UP':     '#E9A84C',
+  'WARMUP':      '#E9A84C',
+  'PEAK':        '#D95F43',
+  'COOL-DOWN':   '#48A999',
+  'COOLDOWN':    '#48A999',
+  'SAVASANA':    '#5B8DB8',
+  'MEDITATION':  '#4A3780',
+};
+
+function getPhaseColor(name) {
+  const key = name.toUpperCase().replace(/[^A-Z-]/g, '');
+  for (const [k, v] of Object.entries(PHASE_COLORS)) {
+    if (key.includes(k.replace('-',''))) return v;
+  }
+  return '#888780';
+}
+
+// ── Structured flow renderer ──────────────────────────────
+function renderFlow(text) {
+  const lines = text.split('\n');
+  let html = '';
+  let inPhase = false;
+
+  // Phase header pattern: CENTERING, WARM-UP, PEAK etc (all caps, optional dash/space + time)
+  const phaseRe = /^(CENTERING|PRANAYAMA|WARM[\s-]?UP|PEAK|COOL[\s-]?DOWN|SAVASANA|MEDITATION)\b(.*)$/i;
+  // Round header: Round 1, Round 2 etc
+  const roundRe = /^(Round\s+\d+)\s*[:\-–]?\s*(.*)$/i;
+  // Pose line: starts with number. **Name** or number. Name
+  const poseRe = /^(\d+|[★\*])\.\s+\*{0,2}([^\*—–\-]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–\-]+?\s*(.+)$/;
+  // Repeated pose (ladder): just "A. Warrior 1 — as before" or greyed
+  const repeatRe = /^[A-Z]\.\s+(.+?)\s*[—–]\s*(as before|repeat.*)$/i;
+  // Intention/blockquote
+  const intentRe = /^["""](.+)["""]\s*$/;
+  // Hold time at end of cue: (5 breaths) or (2 min) or (30 sec)
+  const holdRe = /\((\d+[\d.]*\s*(?:breaths?|min|sec|seconds?)(?:\s+(?:each\s+side|per\s+side|rounds?.*)?)?)\)$/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line === '---') continue;
+
+    // Flow title (first # heading or first bold line)
+    if (line.startsWith('# ')) {
+      html += `<h1 style="font-size:18px;font-weight:600;margin-bottom:4px">${line.slice(2)}</h1>`;
+      continue;
+    }
+
+    // Subtitle / style summary
+    if (line.startsWith('## ')) {
+      const txt = line.slice(3);
+      if (phaseRe.test(txt)) {
+        // fall through to phase handler
+      } else {
+        html += `<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${txt}</p>`;
+        continue;
+      }
+    }
+
+    // Opening intention
+    const intentMatch = line.match(intentRe);
+    if (intentMatch) {
+      html += `<blockquote style="border-left:2px solid var(--accent-border);padding:.6rem 1rem;background:var(--accent-bg);border-radius:0 8px 8px 0;color:var(--text-secondary);font-style:italic;margin:12px 0;font-size:13px">${intentMatch[1]}</blockquote>`;
+      continue;
+    }
+
+    // Phase header
+    const phaseMatch = line.match(phaseRe) || line.replace(/^##\s*/,'').match(phaseRe);
+    if (phaseMatch) {
+      const phaseName = phaseMatch[1].toUpperCase();
+      const phaseExtra = (phaseMatch[2] || '').replace(/[—–\-:]/,'').trim();
+      const color = getPhaseColor(phaseName);
+      if (inPhase) html += '</div>';
+      html += `<div style="margin-bottom:16px">`;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">`;
+      html += `<div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>`;
+      html += `<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">${phaseName}</span>`;
+      if (phaseExtra) html += `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${phaseExtra}</span>`;
+      html += `</div>`;
+      inPhase = true;
+      continue;
+    }
+
+    // Round header (Ladder flows)
+    const roundMatch = line.match(roundRe);
+    if (roundMatch) {
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">`;
+      html += `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--accent-bg);color:var(--accent-text);border:1px solid var(--accent-border)">${roundMatch[1]}</span>`;
+      if (roundMatch[2]) html += `<span style="font-size:11px;color:var(--text-muted);font-style:italic">${roundMatch[2]}</span>`;
+      html += `</div>`;
+      continue;
+    }
+
+    // Repeated pose (greyed, ladder)
+    const repeatMatch = line.match(repeatRe);
+    if (repeatMatch) {
+      html += `<div style="display:flex;gap:10px;padding:5px 10px;opacity:.5;font-size:12px;color:var(--text-secondary)">`;
+      html += `<span style="flex:1;font-style:italic">${repeatMatch[1]} — as before</span>`;
+      html += `</div>`;
+      continue;
+    }
+
+    // New pose in ladder (★ or letter prefix)
+    const newPoseRe = /^[★\*]\s+\*{0,2}([^\*—–]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
+    const newPoseMatch = line.match(newPoseRe);
+    if (newPoseMatch) {
+      const poseName = newPoseMatch[1].trim();
+      const counterTag = newPoseMatch[2];
+      let cue = newPoseMatch[3].trim();
+      const holdMatch = cue.match(holdRe);
+      const holdStr = holdMatch ? holdMatch[0] : '';
+      if (holdStr) cue = cue.replace(holdStr, '').trim();
+      html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;margin:2px 0;border-left:2px solid #bbf7d0">`;
+      html += `<div style="flex:1">`;
+      html += `<div style="font-size:13px;font-weight:500;color:var(--text)">`;
+      html += `${poseName} <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#16a34a;color:#fff;vertical-align:middle">new ★</span>`;
+      if (counterTag) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border)">${counterTag}</span>`;
+      html += `</div>`;
+      html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.55">${cue}</div>`;
+      html += `</div>`;
+      if (holdStr) html += `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;padding-top:2px;font-style:italic">${holdStr.replace(/[()]/g,'')}</span>`;
+      html += `</div>`;
+      continue;
+    }
+
+    // Standard numbered pose
+    const poseMatch = line.match(poseRe);
+    if (poseMatch) {
+      const num = poseMatch[1];
+      const poseName = poseMatch[2].trim();
+      const counterTag = poseMatch[3];
+      let cue = poseMatch[4].trim();
+      const holdMatch = cue.match(holdRe);
+      const holdStr = holdMatch ? holdMatch[0] : '';
+      if (holdStr) cue = cue.replace(holdStr, '').trim();
+      html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">`;
+      html += `<span style="font-size:11px;color:var(--text-muted);min-width:18px;padding-top:2px;flex-shrink:0">${num}</span>`;
+      html += `<div style="flex:1">`;
+      html += `<div style="font-size:13px;font-weight:500;color:var(--text)">${poseName}`;
+      if (counterTag) html += ` <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border);vertical-align:middle">${counterTag}</span>`;
+      html += `</div>`;
+      html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;line-height:1.55">${cue}</div>`;
+      html += `</div>`;
+      if (holdStr) html += `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;padding-top:2px;font-style:italic">${holdStr.replace(/[()]/g,'')}</span>`;
+      html += `</div>`;
+      continue;
+    }
+
+    // Vinyasa / transition line
+    if (/^→|^vinyasa/i.test(line)) {
+      html += `<div style="font-size:11px;color:var(--text-muted);padding:3px 10px;font-style:italic">${line}</div>`;
+      continue;
+    }
+
+    // Branding footer
+    if (/created by/i.test(line)) {
+      html += `<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">${line}</div>`;
+      continue;
+    }
+
+    // Generic line — render as small note
+    if (line.length > 2) {
+      html += `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;font-style:italic">${line}</p>`;
+    }
+  }
+
+  if (inPhase) html += '</div>';
+  return html;
 }
 
 // ── Generate flow ─────────────────────────────────────────
 async function generate() {
-  const prompt = buildPrompt(false);
+  const prompt = buildPrompt();
   await runGeneration(prompt);
 }
 
-async function generatePDF() {
-  const prompt = buildPrompt(true);
-  await runGeneration(prompt, true);
+// ── PDF — no second API call, just print what's on screen ─
+function generatePDF() {
+  if (!lastOutput) {
+    alert('Generate a flow first, then download as PDF.');
+    return;
+  }
+  window.print();
 }
 
-async function runGeneration(prompt, isPDF = false) {
+async function runGeneration(prompt) {
   document.getElementById('output-wrap').style.display = '';
   document.getElementById('loading').style.display = 'flex';
   document.getElementById('output-content').innerHTML = '';
@@ -331,13 +491,12 @@ async function runGeneration(prompt, isPDF = false) {
     const content = await callAPI(prompt);
     lastOutput = content;
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('output-content').innerHTML = mdToHtml(content);
+    document.getElementById('output-content').innerHTML = renderFlow(content);
     document.getElementById('output-actions').style.display = 'flex';
-    if (isPDF) setTimeout(() => window.print(), 300);
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('output-content').innerHTML =
-      '<p style="color:var(--danger-text)">Something went wrong — please try again.</p>';
+      '<p style="color:#dc2626">Something went wrong — please try again.</p>';
   } finally {
     document.getElementById('gen-btn').disabled = false;
     document.getElementById('pdf-btn').disabled = false;

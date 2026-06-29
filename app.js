@@ -321,13 +321,13 @@ function renderFlow(raw) {
 
   const rTitle   = /^#\s+(.+)$/;
   const rPhase   = /^#{1,3}\s*(CENTERING|PRANAYAMA|WARM[\s\-]?UP|PEAK|COOL[\s\-]?DOWN|SAVASANA|MEDITATION)(.*)$/i;
-  const rRound   = /^(Round\s+\d+)\s*[:\-–]?\s*(.*)$/i;
+  const rRound   = /^#{0,3}\s*(Round\s+\d+)\s*[:\-–]?\s*(.*)$/i;
   const rRepeat  = /^-\s+(.+?)\s*[—–]\s*as before/i;
-  const rNewPose = /^[★\*]\s+\*{0,2}([^*—–]+)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
-  const rPose    = /^(\d+)\.\s+\*{0,2}([^*—–]+?)\*{0,2}\s*(?:\[([^\]]+)\])?\s*[—–]\s*(.+)$/;
+  const rNewPose = /^(?:[★]|\*{0,2}[★])\s*\*{0,2}([^*—–★]+?)\*{0,2}\s*(?:\[([^\]]+)\])?\s*(?:[—–]\s*(.+))?$/;
+  const rPose    = /^(\d+)\.\s+\*{0,2}[★]?\s*([^*—–★]+?)\*{0,2}\s*(?:\[([^\]]+)\])?\s*(?:[—–]\s*(.+))?$/;
   const rHold    = /\((\d[\d.]*\s*(?:breaths?|min|sec|seconds?)(?:[^)]*)?)\)\s*$/i;
   const rIntent  = /^\*(.+)\*$|^["""](.+)["""]\s*$/;
-  const rVinyasa = /^(\d+)\.\s+\*{0,2}(Vinyasa)\*{0,2}\s*[—–]\s*(.+)$/i;
+  const rVinyasa = /^(\d+)\.\s+\*{0,2}[★]?\s*(Vinyasa)\*{0,2}\s*(?:[—–]\s*(.+))?$/i;
 
   function closePhase() { if (inPhase) { html += '</div>'; inPhase = false; } }
 
@@ -344,6 +344,15 @@ function renderFlow(raw) {
   }
 
   function poseRow(num, name, counter, cue, isNew) {
+    cue = cue || '';
+    // Repeated pose — no cue, show compact greyed row
+    if (!cue && !isNew) {
+      html += `<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);opacity:.45">`;
+      html += `<span style="font-size:11px;color:var(--text-muted);min-width:20px">${escHtml(String(num))}</span>`;
+      html += `<span style="font-size:12px;color:var(--text-secondary);font-style:italic">${escHtml(name.trim())}</span>`;
+      html += `</div>`;
+      return;
+    }
     const holdMatch = cue.match(rHold);
     const hold = holdMatch ? holdMatch[1] : '';
     if (hold) cue = cue.replace(holdMatch[0], '').trim();

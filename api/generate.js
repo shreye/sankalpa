@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
 
   // ── Dynamic max_tokens based on duration ──────────────────
   // ~10 tokens per minute of flow is a safe ceiling with buffer
-  const maxTokens = Math.min(4000, Math.max(600, dur * 28));
+  const maxTokens = Math.min(6000, Math.max(800, dur * 40));
 
   // ── Tight system prompt — every token costs money ─────────
   const system = `You are a yoga flow creator for @groundingwithshera. Output structured yoga flows a teacher can use immediately.
@@ -32,7 +32,7 @@ FORMAT:
 - If theme given: italic opening intention (2-3 sentences) teacher reads aloud
 - Phase headers: CENTERING | WARM-UP | PEAK | COOL-DOWN | SAVASANA (add PRANAYAMA after CENTERING and MEDITATION after SAVASANA only if breathwork requested)
 - Each phase header: include phase total time
-- Each pose: number. **Name** [counter-pose if applicable] — cue as one flowing sentence that opens with the transition from previous pose
+- Each pose: number. **Name (side if applicable)** [counter-pose if applicable] — cue as one flowing sentence that opens with the transition from previous pose
 - Static holds only: add (X breaths) or (X min) at end of cue
 - Ladder flows: Round 1/2/3 etc. Mark new poses ★. Repeat previous poses as name only, no cue
 - Final line: Created by @groundingwithshera
